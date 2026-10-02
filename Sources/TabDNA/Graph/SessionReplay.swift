@@ -17,6 +17,14 @@ struct SessionReplaySequence {
     func page(at index: Int) -> BrowsingNode? {
         pages.indices.contains(index) ? pages[index] : nil
     }
+
+    func previousPage(at index: Int) -> BrowsingNode? {
+        page(at: index - 1)
+    }
+
+    func connection(to page: BrowsingNode) -> BrowsingNode? {
+        pages.first { $0.id == page.parentNodeId }
+    }
 }
 
 @MainActor @Observable
@@ -31,7 +39,7 @@ final class SessionReplay {
     var speed: Double = 1 {
         didSet { if speed != oldValue { generation += 1 } }
     }
-
+    var stepInterval: TimeInterval { 2.4 / max(0.5, min(2, speed)) }
     var isPlaying: Bool { phase == .playing }
     var isOverview: Bool { phase == .overview }
     var focusedPageID: UUID? { isOverview || pageIDs.isEmpty ? nil : pageIDs[index] }
