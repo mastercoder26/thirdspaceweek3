@@ -15,8 +15,12 @@ enum GraphViewport {
     }
     static func zoomOffset(from oldScale: CGFloat, to newScale: CGFloat, offset: CGSize, anchor: CGPoint) -> CGSize {
         let ratio = newScale / oldScale
-        return CGSize(width: anchor.x - (anchor.x - offset.width) * ratio,
-                      height: anchor.y - (anchor.y - offset.height) * ratio)
+        return CGSize(width: anchor.x - (anchor.x - offset.width) * ratio, height: anchor.y - (anchor.y - offset.height) * ratio)
+    }
+    /// Keep the current page centered at a readable scale during playback.
+    static func follow(target: CGPoint, viewport: CGSize) -> (scale: CGFloat, offset: CGSize) {
+        let scale = min(0.9, max(0.1, min((viewport.width - 48) / 220, (viewport.height - 48) / 98)))
+        return (scale, CGSize(width: viewport.width / 2 - target.x * scale, height: viewport.height / 2 - target.y * scale))
     }
     static func edgePath(from source: CGPoint, to target: CGPoint, mode: GraphLayoutMode) -> Path {
         var path = Path()
