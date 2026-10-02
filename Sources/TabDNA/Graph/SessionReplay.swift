@@ -15,8 +15,7 @@ struct SessionReplaySequence {
     }
 
     func page(at index: Int) -> BrowsingNode? {
-        guard pages.indices.contains(index) else { return nil }
-        return pages[index]
+        pages.indices.contains(index) ? pages[index] : nil
     }
 }
 
@@ -44,5 +43,17 @@ final class SessionReplay {
         index = min(index, max(0, ids.count - 1))
         if isOverview { index = max(0, ids.count - 1) }
         if ids.isEmpty { phase = .overview; index = 0 }
+    }
+
+    func play() {
+        guard !pageIDs.isEmpty else { return }
+        if isOverview || index == pageIDs.count - 1 { index = 0 }
+        followsPage = true
+        phase = pageIDs.count > 1 ? .playing : .finished
+    }
+
+    func pause() {
+        guard isPlaying else { return }
+        phase = .paused
     }
 }
