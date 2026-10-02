@@ -17,10 +17,18 @@ enum GraphViewport {
         let ratio = newScale / oldScale
         return CGSize(width: anchor.x - (anchor.x - offset.width) * ratio, height: anchor.y - (anchor.y - offset.height) * ratio)
     }
-    /// Keep the current page centered at a readable scale during playback.
-    static func follow(target: CGPoint, viewport: CGSize) -> (scale: CGFloat, offset: CGSize) {
+    /// Include the source when both cards fit at a readable scale. Distant
+    /// branches must not force a huge zoom-out or move the current card offscreen.
+    static func follow(target: CGPoint, source: CGPoint?, viewport: CGSize) -> (scale: CGFloat, offset: CGSize) {
         let scale = min(0.9, max(0.1, min((viewport.width - 48) / 220, (viewport.height - 48) / 98)))
-        return (scale, CGSize(width: viewport.width / 2 - target.x * scale, height: viewport.height / 2 - target.y * scale))
+        var center = target
+        if let source {
+            let related = bounds(positions: [source, target])
+            if related.width * scale <= viewport.width - 48, related.height * scale <= viewport.height - 48 {
+                center = CGPoint(x: related.midX, y: related.midY)
+            }
+        }
+        return (scale, CGSize(width: viewport.width / 2 - center.x * scale, height: viewport.height / 2 - center.y * scale))
     }
     static func edgePath(from source: CGPoint, to target: CGPoint, mode: GraphLayoutMode) -> Path {
         var path = Path()
