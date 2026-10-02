@@ -6,7 +6,7 @@ public enum NavigationTab: String, CaseIterable, Identifiable {
     case dashboard = "Overview"
     case sessions = "Session library"
     case saved = "Saved pages"
-    case explore = "Explore"
+    case explore = "Session map"
     case statistics = "Insights"
     case settings = "Settings"
 
