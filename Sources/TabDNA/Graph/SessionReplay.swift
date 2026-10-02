@@ -42,7 +42,7 @@ final class SessionReplay {
         pageIDs = ids
         index = min(index, max(0, ids.count - 1))
         if isOverview { index = max(0, ids.count - 1) }
-        if ids.isEmpty { phase = .overview; index = 0 }
+        if ids.isEmpty { showAll() }
     }
 
     func play() {
@@ -55,5 +55,18 @@ final class SessionReplay {
     func pause() {
         guard isPlaying else { return }
         phase = .paused
+    }
+
+    func seek(to requestedIndex: Int) {
+        guard !pageIDs.isEmpty else { return }
+        index = min(max(0, requestedIndex), pageIDs.count - 1)
+        phase = .paused
+    }
+
+    func step(_ delta: Int) { seek(to: index + delta) }
+
+    func showAll() {
+        phase = .overview
+        index = max(0, pageIDs.count - 1)
     }
 }
