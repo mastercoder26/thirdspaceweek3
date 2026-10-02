@@ -34,7 +34,15 @@ final class SessionReplay {
     var isOverview: Bool { phase == .overview }
     var focusedPageID: UUID? { isOverview || pageIDs.isEmpty ? nil : pageIDs[index] }
     var visiblePageIDs: Set<UUID> {
-        let slice = isOverview ? pageIDs : Array(pageIDs.prefix(index + 1))
-        return Set(slice)
+        Set(isOverview ? pageIDs : Array(pageIDs.prefix(index + 1)))
+    }
+
+    func reconcile(_ sequence: SessionReplaySequence) {
+        let ids = sequence.pages.map(\.id)
+        guard ids != pageIDs else { return }
+        pageIDs = ids
+        index = min(index, max(0, ids.count - 1))
+        if isOverview { index = max(0, ids.count - 1) }
+        if ids.isEmpty { phase = .overview; index = 0 }
     }
 }
