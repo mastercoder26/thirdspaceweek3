@@ -26,8 +26,11 @@ final class SessionReplay {
     private(set) var pageIDs: [UUID] = []
     private(set) var index = 0
     private(set) var phase: Phase = .overview
+    private(set) var generation = 0
     var followsPage = true
-    var speed: Double = 1
+    var speed: Double = 1 {
+        didSet { if speed != oldValue { generation += 1 } }
+    }
 
     var isPlaying: Bool { phase == .playing }
     var isOverview: Bool { phase == .overview }
@@ -39,8 +42,14 @@ final class SessionReplay {
     func reconcile(_ sequence: SessionReplaySequence) {
         let ids = sequence.pages.map(\.id)
         guard ids != pageIDs else { return }
+        let focusedID = focusedPageID
         pageIDs = ids
-        index = min(index, max(0, ids.count - 1))
+        if let focusedID, let preservedIndex = ids.firstIndex(of: focusedID) {
+            index = preservedIndex
+        } else {
+            index = min(index, max(0, ids.count - 1))
+            pause()
+        }
         if isOverview { index = max(0, ids.count - 1) }
         if ids.isEmpty { showAll() }
     }
@@ -50,17 +59,20 @@ final class SessionReplay {
         if isOverview || index == pageIDs.count - 1 { index = 0 }
         followsPage = true
         phase = pageIDs.count > 1 ? .playing : .finished
+        generation += 1
     }
 
     func pause() {
         guard isPlaying else { return }
         phase = .paused
+        generation += 1
     }
 
     func seek(to requestedIndex: Int) {
         guard !pageIDs.isEmpty else { return }
         index = min(max(0, requestedIndex), pageIDs.count - 1)
         phase = .paused
+        generation += 1
     }
 
     func step(_ delta: Int) { seek(to: index + delta) }
@@ -68,5 +80,14 @@ final class SessionReplay {
     func showAll() {
         phase = .overview
         index = max(0, pageIDs.count - 1)
+        generation += 1
     }
+
+    func advance(generation expectedGeneration: Int) {
+        guard isPlaying, generation == expectedGeneration else { return }
+        index = min(index + 1, pageIDs.count - 1)
+        if index == pageIDs.count - 1 { phase = .finished }
+    }
+
+    func takeControl() { pause(); followsPage = false }
 }
