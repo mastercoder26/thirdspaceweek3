@@ -56,13 +56,12 @@ public struct VisualizationView: View {
                 HStack(spacing: 0) {
                     GeometryReader { geometry in
                         graphCanvas(size: geometry.size)
-                            .id(layoutMode).transition(.opacity)
                             .onAppear {
                                 viewportSize = geometry.size
+                                replay.reconcile(sequence)
                                 rebuild(reset: true)
-                                replayTime = endTime
                                 fitGraph()
-                                if zoomScale < 0.35, let first = allNodes.first {
+                                if zoomScale < 0.35, let first = sequence.pages.first {
                                     center(on: first.id, scale: 0.85)
                                     showsMap = true
                                 }
@@ -72,6 +71,7 @@ public struct VisualizationView: View {
                                 panOffset.width += (size.width - viewportSize.width) / 2
                                 panOffset.height += (size.height - viewportSize.height) / 2
                                 viewportSize = size
+                                if replay.followsPage, let id = replay.focusedPageID { followPage(id) }
                             }
                     }.frame(maxWidth: .infinity, maxHeight: .infinity)
                     if let node = selectedNode {
@@ -87,25 +87,44 @@ public struct VisualizationView: View {
                     }
                 }
                 Divider()
-                TimelineReplayView(currentReplayTime: $replayTime, followsLatest: $followsLatest,
-                    startTime: startTime, endTime: endTime, totalNodesCount: allNodes.count,
-                    visibleNodesCount: allNodes.filter { followsLatest || $0.timestampOpened <= replayTime }.count)
-                    .padding(.horizontal, 18).padding(.vertical, 10)
+                TimelineReplayView(replay: replay)
+                    .padding(.horizontal, 18).padding(.vertical, 12)
             }
         }.background(DNAStyle.background)
         .animation(reduceMotion ? .easeOut(duration: 0.12) : .spring(response: 0.32, dampingFraction: 1), value: selectedNodeId)
-        .animation(.easeOut(duration: reduceMotion ? 0.1 : 0.18), value: layoutMode)
-        .animation(.easeOut(duration: reduceMotion ? 0.1 : 0.18), value: Set(visibleNodes.map { $0.id }))
         .onChange(of: allNodes) { old, new in
-            let changedStructure = old.map { $0.id } != new.map { $0.id }
+            let changedStructure = Set(old.map { $0.id }) != Set(new.map { $0.id })
+            replay.reconcile(sequence)
             rebuild(reset: false)
-            if followsLatest { replayTime = endTime }
             if changedStructure && old.isEmpty { fitGraph() }
+            if changedStructure, replay.isOverview, replay.followsPage, session.isActive,
+               let latest = sequence.pages.last { animateNavigation { followPage(latest.id) } }
             if let selectedNodeId, !new.contains(where: { $0.id == selectedNodeId }) { self.selectedNodeId = nil }
         }
         .onChange(of: appState.requestedNodeId) { _, id in if let id { selectNode(id) } }
-        .onChange(of: replayTime) { _, _ in
-            if !followsLatest, let node = selectedNode, node.timestampOpened > replayTime { selectedNodeId = nil }
+        .onChange(of: replay.focusedPageID) { _, id in
+            if let id, replay.followsPage { animateNavigation { followPage(id) } }
+            if let node = selectedNode, !replay.visiblePageIDs.contains(node.id) { selectedNodeId = nil }
+        }
+        .onChange(of: replay.followsPage) { _, follows in
+            if follows, let id = replay.focusedPageID { animateNavigation { followPage(id) } }
+        }
+        .onChange(of: replay.isOverview) { _, overview in
+            if overview { animateNavigation { fitGraph() } }
+        }
+        .onChange(of: replay.isPlaying) { _, playing in
+            if playing { selectedNodeId = nil; searchQuery = "" }
+        }
+        .task(id: replay.generation) {
+            let generation = replay.generation
+            while replay.isPlaying && replay.generation == generation {
+                do { try await Task.sleep(for: .seconds(replay.stepInterval)) }
+                catch { return }
+                guard !Task.isCancelled else { return }
+                withAnimation(reduceMotion ? .easeOut(duration: 0.1) : .spring(response: 0.4, dampingFraction: 1)) {
+                    replay.advance(generation: generation)
+                }
+            }
         }
         .onExitCommand { selectedNodeId = nil; searchQuery = "" }
     }
