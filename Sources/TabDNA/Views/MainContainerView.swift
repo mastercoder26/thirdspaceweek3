@@ -64,12 +64,9 @@ public struct MainContainerView: View {
                 }
                 if appState.selectedTab == .explore, let session = appState.selectedSession {
                     ToolbarItem {
-                        Menu {
-                            ForEach(appState.sessions) { item in
-                                Button(item.displayTitle) { appState.selectSession(item) }
-                            }
-                        } label: { Label("Switch session", systemImage: "clock.arrow.circlepath") }
-                        .help("Switch session").accessibilityLabel("Switch session")
+                        Button { appState.selectedTab = .sessions } label: {
+                            Label("Sessions", systemImage: "list.bullet")
+                        }.help("Choose another session from the library").accessibilityLabel("Choose session")
                     }
                     ToolbarItem {
                         Menu {
