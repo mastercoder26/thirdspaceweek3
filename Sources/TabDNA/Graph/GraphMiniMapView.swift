@@ -9,6 +9,7 @@ public struct GraphMiniMapView: View {
     @Binding public var panOffset: CGSize
     public let zoomScale: CGFloat
     public let canvasViewportSize: CGSize
+    public var onNavigate: (() -> Void)? = nil
 
     public var body: some View {
         let bounds = GraphViewport.bounds(positions: positions.filter { visibleNodeIds.contains($0.key) }.map { $0.value }).insetBy(dx: -80, dy: -80)
@@ -38,7 +39,9 @@ public struct GraphMiniMapView: View {
                 context.stroke(Path(roundedRect: viewport, cornerRadius: 2), with: .color(DNAStyle.accent.opacity(0.65)), lineWidth: 1)
             }.frame(width: 180, height: 110).clipped()
                 .contentShape(Rectangle()).gesture(DragGesture(minimumDistance: 0).onChanged { value in
-                    let world = CGPoint(x: (value.location.x - inset.x) / scale + bounds.minX, y: (value.location.y - inset.y) / scale + bounds.minY)
+                    onNavigate?()
+                    let world = CGPoint(x: (value.location.x - inset.x) / scale + bounds.minX,
+                                        y: (value.location.y - inset.y) / scale + bounds.minY)
                     panOffset = CGSize(width: canvasViewportSize.width / 2 - world.x * zoomScale, height: canvasViewportSize.height / 2 - world.y * zoomScale)
                 })
         }.padding(12).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
