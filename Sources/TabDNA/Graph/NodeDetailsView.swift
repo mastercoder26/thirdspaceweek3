@@ -181,12 +181,10 @@ public struct NodeDetailsView: View {
 
                     // Metadata Grid
                     VStack(spacing: 12) {
-                        detailRow(icon: "clock.fill", title: "Visited At", value: node.formattedTime, color: .blue)
-                        detailRow(icon: "hourglass", title: "Active Duration", value: node.formattedDuration, color: .orange)
+                        detailRow(icon: "clock.fill", title: "Visited at", value: node.formattedTime, color: .blue)
+                        detailRow(icon: "hourglass", title: "Time on page", value: node.formattedDuration, color: .orange)
                         detailRow(icon: "globe", title: "Domain", value: node.domain, color: .purple)
-                        detailRow(icon: "macwindow", title: "Recorded Browser", value: node.browserName, color: .teal)
-                        detailRow(icon: "arrow.triangle.branch", title: "Branch Level", value: "Level \(node.branchLevel)", color: .cyan)
-                        detailRow(icon: "point.3.connected.trianglepath.dotted", title: "Branches Created", value: "\(childNodes.count)", color: .green)
+                        detailRow(icon: "macwindow", title: "Browser", value: node.browserName, color: .teal)
                     }
                     .padding(12)
                     .background(Color.primary.opacity(0.03))
