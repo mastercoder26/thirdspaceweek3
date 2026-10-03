@@ -133,8 +133,14 @@ public struct VisualizationView: View {
         HStack(spacing: 12) {
             Picker("Layout", selection: $layoutMode) {
                 ForEach(GraphLayoutMode.allCases) { mode in Label(mode.rawValue, systemImage: mode.icon).tag(mode) }
-            }.labelsHidden().frame(width: 160)
-                .onChange(of: layoutMode) { _, _ in rebuild(reset: true); fitGraph() }
+            }.pickerStyle(.segmented).labelsHidden().frame(width: 200)
+                .onChange(of: layoutMode) { _, _ in
+                    rebuild(reset: true)
+                    animateNavigation {
+                        if let id = replay.focusedPageID, replay.followsPage { followPage(id) }
+                        else { fitGraph() }
+                    }
+                }
             Divider().frame(height: 20)
             HStack(spacing: 7) {
                 Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
@@ -281,10 +287,16 @@ public struct VisualizationView: View {
         zoomScale = scale
         panOffset = CGSize(width: viewportSize.width / 2 - point.x * scale, height: viewportSize.height / 2 - point.y * scale)
     }
+    private func followPage(_ id: UUID) {
+        guard let target = positions[id], let page = allNodes.first(where: { $0.id == id }) else { return }
+        let camera = GraphViewport.follow(target: target, source: page.parentNodeId.flatMap { positions[$0] }, viewport: viewportSize)
+        zoomScale = camera.scale
+        panOffset = camera.offset
+    }
+
     private func selectNode(_ id: UUID) {
-        collapsed.subtract(GraphEngine.shared.findAncestors(for: id, in: allNodes))
-        followsLatest = true
-        replayTime = endTime
+        replay.showAll()
+        replay.followsPage = false
         animateNavigation {
             selectedNodeId = id
             center(on: id)
