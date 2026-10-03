@@ -2,7 +2,7 @@ import Foundation
 import SwiftUI
 
 public enum GraphLayoutMode: String, CaseIterable, Identifiable, Sendable {
-    case horizontal = "Tree"
+    case horizontal = "Connections"
     case waterfall = "Timeline"
 
     public var id: String { rawValue }
