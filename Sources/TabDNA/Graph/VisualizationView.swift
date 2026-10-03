@@ -156,8 +156,6 @@ public struct VisualizationView: View {
                 Button("Next") { nextMatch() }.disabled(matchingNodes.isEmpty)
             }
             Spacer(minLength: 0)
-            Toggle(isOn: $focusBranch) { Image(systemName: "scope") }.toggleStyle(.button)
-                .help("Highlight the selected page’s path").accessibilityLabel("Focus selected path")
             Text("\(visibleNodes.count) \(visibleNodes.count == 1 ? "page" : "pages")").font(.system(size: 11)).foregroundStyle(.secondary)
         }.padding(.horizontal, 18).padding(.vertical, 12)
     }
@@ -179,33 +177,33 @@ public struct VisualizationView: View {
             }.background(DNAStyle.surface.opacity(0.35))
                 .contentShape(Rectangle())
                 .gesture(DragGesture().updating($panTranslation) { value, state, _ in state = value.translation }
+                    .onChanged { _ in replay.takeControl() }
                     .onEnded { value in panOffset.width += value.translation.width; panOffset.height += value.translation.height })
                 .onTapGesture { selectedNodeId = nil }
 
             GraphEdgesCanvas(edges: edges, positions: positions, visibleIds: visibleIds,
-                trail: activeTrail, focusBranch: focusBranch, mode: layoutMode,
+                trail: activeTrail, mode: layoutMode,
                 scale: zoomScale, offset: offset).allowsHitTesting(false)
 
             ForEach(visible) { node in
                 if let layout = layouts[node.id], let point = positions[node.id] {
                     NodeCardView(layout: layout, isSelected: selectedNodeId == node.id,
-                        isHovered: false, isSearchMatched: matches.contains(node.id),
+                        isSearchMatched: matches.contains(node.id),
                         isBranchHighlighted: activeTrail.contains(node.id),
                         isCurrentlyActiveTab: observer.lastActiveNodeId == node.id && observer.currentTabInfo != nil,
-                        isCollapsed: collapsed.contains(node.id),
-                        onSelect: { selectedNodeId = selectedNodeId == node.id ? nil : node.id },
-                        onToggleCollapse: {
-                            withAnimation(.easeOut(duration: reduceMotion ? 0.1 : 0.18)) {
-                                if collapsed.contains(node.id) { collapsed.remove(node.id) } else { collapsed.insert(node.id) }
-                            }
+                        isReplayFocused: replay.focusedPageID == node.id,
+                        onSelect: {
+                            replay.takeControl()
+                            selectedNodeId = selectedNodeId == node.id ? nil : node.id
                         },
                         onDragDelta: { delta in
+                            replay.takeControl()
                             let origin = dragOrigins[node.id] ?? point
                             dragOrigins[node.id] = origin
                             positions[node.id] = CGPoint(x: origin.x + delta.width / zoomScale, y: origin.y + delta.height / zoomScale)
                         },
                         onDragEnded: { _ in dragOrigins[node.id] = nil; appState.graphPositions = positions })
-                        .opacity((!searchQuery.isEmpty && !matches.contains(node.id)) || (focusBranch && !activeTrail.isEmpty && !activeTrail.contains(node.id)) ? 0.35 : 1)
+                        .opacity((!searchQuery.isEmpty && !matches.contains(node.id)) ? 0.35 : 1)
                         .transition(.opacity)
                         .scaleEffect(zoomScale)
                         .position(x: point.x * zoomScale + offset.width, y: point.y * zoomScale + offset.height)
@@ -215,21 +213,24 @@ public struct VisualizationView: View {
         .frame(width: size.width, height: size.height).clipped()
         .coordinateSpace(name: "graphViewport")
         .simultaneousGesture(MagnificationGesture().onChanged { value in
+            replay.takeControl()
             changeZoom(zoomScale * value / lastMagnification)
             lastMagnification = value
         }.onEnded { _ in lastMagnification = 1 })
         .overlay(alignment: .bottomLeading) {
             HStack(spacing: 4) {
-                Button { animateNavigation { changeZoom(zoomScale / 1.25) } } label: { Image(systemName: "minus").frame(width: 25, height: 25) }
+                Button { replay.takeControl(); animateNavigation { changeZoom(zoomScale / 1.25) } } label: { Image(systemName: "minus").frame(width: 25, height: 25) }
                     .help("Zoom out").accessibilityLabel("Zoom out")
                 Text("\(Int(zoomScale * 100))%").font(.system(size: 11, weight: .medium)).monospacedDigit().frame(width: 42)
-                Button { animateNavigation { changeZoom(zoomScale * 1.25) } } label: { Image(systemName: "plus").frame(width: 25, height: 25) }
+                Button { replay.takeControl(); animateNavigation { changeZoom(zoomScale * 1.25) } } label: { Image(systemName: "plus").frame(width: 25, height: 25) }
                     .help("Zoom in").accessibilityLabel("Zoom in")
                 Divider().frame(height: 18)
-                Button("Fit") { animateNavigation { fitGraph() } }.help("Fit all visible pages")
-                Button("Start") { animateNavigation { if let root = allNodes.first { center(on: root.id, scale: 1) } } }.help("Show the first page at a readable size")
-                Button { withAnimation(.easeOut(duration: 0.15)) { showsMap.toggle() } } label: { Image(systemName: "map").frame(width: 25, height: 25) }
-                    .help("Show overview map").accessibilityLabel("Toggle overview map")
+                Button("Fit pages") { replay.takeControl(); animateNavigation { fitGraph() } }.help("Fit all visible pages")
+                Button {
+                    replay.takeControl()
+                    withAnimation(.easeOut(duration: 0.15)) { showsMap.toggle() }
+                } label: { Label("Overview", systemImage: "map") }
+                    .help("Show a small overview of the session").accessibilityLabel("Toggle overview map")
             }.buttonStyle(.borderless).padding(7)
                 .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 10)).padding(14)
         }
@@ -237,7 +238,7 @@ public struct VisualizationView: View {
             if showsMap {
                 GraphMiniMapView(layouts: layouts, edges: edges, positions: positions,
                     visibleNodeIds: visibleIds, selectedNodeId: selectedNodeId,
-                    panOffset: $panOffset, zoomScale: zoomScale, canvasViewportSize: size).padding(14)
+                    panOffset: $panOffset, zoomScale: zoomScale, canvasViewportSize: size, onNavigate: { replay.takeControl() }).padding(14)
             } else {
                 Text("Drag to pan · Pinch to zoom · Select a page for details")
                     .font(.system(size: 10)).foregroundStyle(.secondary)
@@ -293,7 +294,6 @@ public struct VisualizationView: View {
         zoomScale = camera.scale
         panOffset = camera.offset
     }
-
     private func selectNode(_ id: UUID) {
         replay.showAll()
         replay.followsPage = false
@@ -321,7 +321,6 @@ private struct GraphEdgesCanvas: View, Animatable {
     let positions: [UUID: CGPoint]
     let visibleIds: Set<UUID>
     let trail: Set<UUID>
-    let focusBranch: Bool
     let mode: GraphLayoutMode
     var scale: CGFloat
     var offset: CGSize
@@ -336,9 +335,8 @@ private struct GraphEdgesCanvas: View, Animatable {
             for edge in edges where visibleIds.contains(edge.sourceId) && visibleIds.contains(edge.targetId) {
                 guard let source = positions[edge.sourceId], let target = positions[edge.targetId] else { continue }
                 let highlighted = trail.contains(edge.sourceId) && trail.contains(edge.targetId)
-                let dim = focusBranch && !trail.isEmpty && !highlighted
                 context.stroke(GraphViewport.edgePath(from: source, to: target, mode: mode),
-                    with: .color(DNAStyle.branch(edge.level).opacity(dim ? 0.13 : (highlighted ? 0.85 : 0.4))),
+                    with: .color(highlighted ? DNAStyle.accent.opacity(0.85) : Color.secondary.opacity(0.3)),
                     style: StrokeStyle(lineWidth: highlighted ? 2.5 : 1.5, lineCap: .round))
             }
         }
