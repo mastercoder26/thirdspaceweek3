@@ -14,7 +14,8 @@ public struct NodeCardView: View {
 
     public var body: some View {
         let node = layout.node
-        let color = DNAStyle.branch(layout.branchLevel)
+        let color = isReplayFocused || isBranchHighlighted ? DNAStyle.accent : Color.secondary
+        let emphasized = isSelected || isReplayFocused
         ZStack(alignment: .bottomTrailing) {
             Button(action: onSelect) {
                 VStack(alignment: .leading, spacing: 7) {
@@ -30,18 +31,23 @@ public struct NodeCardView: View {
                     HStack(spacing: 5) {
                         Text(node.formattedDuration).monospacedDigit()
                         Text("·")
-                        Text(layout.isRoot ? "Starting page" : "Step \(layout.branchLevel)")
+                        Text(isReplayFocused ? "Now showing" : node.formattedTime)
                         Spacer()
+                        if layout.childIds.count > 1 {
+                            Label("\(layout.childIds.count) paths", systemImage: "arrow.triangle.branch")
+                                .help("Later visits share this page as their recorded starting point")
+                        }
                     }.font(.system(size: 9)).foregroundStyle(.secondary)
                 }.padding(12).frame(width: 220, height: 98)
-                    .background(DNAStyle.surface, in: RoundedRectangle(cornerRadius: 12))
+                    .background(isReplayFocused ? DNAStyle.accent.opacity(0.08) : DNAStyle.surface, in: RoundedRectangle(cornerRadius: 12))
                     .overlay(alignment: .leading) {
                         RoundedRectangle(cornerRadius: 2).fill(color).frame(width: 3, height: 40).padding(.leading, 1)
                     }
-                    .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(isSelected || isSearchMatched ? DNAStyle.accent : (hovered ? color.opacity(0.5) : DNAStyle.border), lineWidth: isSelected ? 2 : 1))
+                    .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(emphasized || isSearchMatched ? DNAStyle.accent : (hovered ? color.opacity(0.5) : DNAStyle.border), lineWidth: emphasized ? 2 : 1))
                     .shadow(color: .black.opacity(isSelected ? 0.09 : 0.04), radius: 4, y: 2)
             }.buttonStyle(PressableCardStyle())
                 .accessibilityLabel("\(node.title), \(node.domain), \(node.formattedDuration)")
+                .accessibilityValue(isReplayFocused ? "Current playback page" : "")
                 .accessibilityHint("Show page details")
                 .help("Select to view details. Drag to reposition.")
                 .highPriorityGesture(DragGesture(minimumDistance: 6, coordinateSpace: .named("graphViewport"))
