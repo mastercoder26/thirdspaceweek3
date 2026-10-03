@@ -44,15 +44,17 @@ public struct MainContainerView: View {
                 }.padding(.horizontal, 6)
             }.navigationSplitViewColumnWidth(min: 190, ideal: 215, max: 250)
         } detail: {
-            ZStack {
-                content.id(appState.selectedTab)
-                    .transition(.opacity)
-                    .animation(.easeOut(duration: reduceMotion ? 0.1 : 0.18), value: appState.selectedTab)
-                if isCommandPalettePresented {
-                    CommandPaletteView(isPresented: $isCommandPalettePresented)
-                        .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.98, anchor: .top)))
-                        .zIndex(10)
-                }
+            GeometryReader { geometry in
+                ZStack {
+                    content.id(appState.selectedTab)
+                        .transition(.opacity)
+                        .animation(.easeOut(duration: reduceMotion ? 0.1 : 0.18), value: appState.selectedTab)
+                    if isCommandPalettePresented {
+                        CommandPaletteView(isPresented: $isCommandPalettePresented)
+                            .transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.98, anchor: .top)))
+                            .zIndex(10)
+                    }
+                }.frame(width: geometry.size.width, height: geometry.size.height)
             }
             .animation(.easeOut(duration: reduceMotion ? 0.1 : 0.18), value: appState.selectedTab)
             .animation(reduceMotion ? .easeOut(duration: 0.1) : .spring(response: 0.3, dampingFraction: 1), value: isCommandPalettePresented)
