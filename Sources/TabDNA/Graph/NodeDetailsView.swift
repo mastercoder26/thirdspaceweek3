@@ -102,10 +102,10 @@ public struct NodeDetailsView: View {
                             Image(systemName: "arrow.triangle.branch")
                                 .foregroundStyle(Color.purple)
                             VStack(alignment: .leading, spacing: 1) {
-                                Text("BRANCHING POINT")
-                                    .font(.system(size: 9, weight: .black, design: .rounded))
+                                Text("This page splits into \(childNodes.count) paths")
+                                    .font(.system(size: 11, weight: .semibold))
                                     .foregroundStyle(Color.purple)
-                                Text("This page connects to \(childNodes.count) other pages.")
+                                Text("These later visits share this page as their recorded starting point. You may have returned here or used another tab.")
                                     .font(.system(size: 11))
                                     .foregroundStyle(Color.secondary)
                             }
