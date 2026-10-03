@@ -17,10 +17,7 @@ public struct VisualizationView: View {
     @State private var lastMagnification: CGFloat = 1
     @State private var selectedNodeId: UUID?
     @State private var searchQuery = ""
-    @State private var focusBranch = false
-    @State private var collapsed: Set<UUID> = []
-    @State private var replayTime = Date.distantFuture
-    @State private var followsLatest = true
+    @State private var replay = SessionReplay()
     @State private var viewportSize: CGSize = .zero
     @State private var showsMap = false
 
@@ -28,13 +25,10 @@ public struct VisualizationView: View {
         self.session = session
         self.allNodes = allNodes
     }
-    private var startTime: Date { allNodes.map { $0.timestampOpened }.min() ?? session.startTime }
-    private var endTime: Date { max(startTime.addingTimeInterval(1), allNodes.map { $0.timestampOpened }.max() ?? startTime) }
+    private var sequence: SessionReplaySequence { SessionReplaySequence(nodes: allNodes) }
     private var visibleNodes: [BrowsingNode] {
-        allNodes.filter { node in
-            (followsLatest || node.timestampOpened <= replayTime) &&
-            (collapsed.isEmpty || !GraphEngine.shared.findAncestors(for: node.id, in: allNodes).dropLast().contains(where: { collapsed.contains($0) }))
-        }
+        let ids = replay.visiblePageIDs
+        return allNodes.filter { ids.contains($0.id) }
     }
     private var matchingNodes: [BrowsingNode] {
         let query = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -43,8 +37,8 @@ public struct VisualizationView: View {
     }
     private var selectedNode: BrowsingNode? { allNodes.first { $0.id == selectedNodeId } }
     private var trail: Set<UUID> {
-        guard let selectedNodeId else { return [] }
-        return Set(GraphEngine.shared.findAncestors(for: selectedNodeId, in: allNodes))
+        guard let id = replay.focusedPageID ?? selectedNodeId else { return [] }
+        return Set(GraphEngine.shared.findAncestors(for: id, in: allNodes))
     }
 
     public var body: some View {
