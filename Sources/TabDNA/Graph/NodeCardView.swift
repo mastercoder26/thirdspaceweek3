@@ -3,14 +3,11 @@ import SwiftUI
 public struct NodeCardView: View {
     public let layout: GraphNodeLayout
     public let isSelected: Bool
-    public let isHovered: Bool
     public let isSearchMatched: Bool
     public let isBranchHighlighted: Bool
-    public var isJustBorn: Bool = false
     public var isCurrentlyActiveTab: Bool = false
-    public var isCollapsed: Bool = false
+    public var isReplayFocused: Bool = false
     public let onSelect: () -> Void
-    public var onToggleCollapse: (() -> Void)?
     public let onDragDelta: (CGSize) -> Void
     public var onDragEnded: ((CGSize) -> Void)?
     @State private var hovered = false
@@ -50,17 +47,6 @@ public struct NodeCardView: View {
                 .highPriorityGesture(DragGesture(minimumDistance: 6, coordinateSpace: .named("graphViewport"))
                     .onChanged { onDragDelta($0.translation) }
                     .onEnded { onDragEnded?($0.translation) })
-            if !layout.childIds.isEmpty, let toggle = onToggleCollapse {
-                Button(action: toggle) {
-                    HStack(spacing: 3) {
-                        Text("\(layout.childIds.count)")
-                        Image(systemName: isCollapsed ? "chevron.right" : "chevron.down")
-                    }.font(.system(size: 9, weight: .semibold)).padding(.horizontal, 6).padding(.vertical, 4)
-                        .background(isCollapsed ? color.opacity(0.13) : Color.primary.opacity(0.04), in: Capsule())
-                }.buttonStyle(.plain).padding(8)
-                    .accessibilityLabel(isCollapsed ? "Expand \(layout.childIds.count) branches" : "Collapse \(layout.childIds.count) branches")
-                    .help(isCollapsed ? "Expand branches" : "Collapse branches")
-            }
         }.onHover { hovered = $0 }
     }
 }
