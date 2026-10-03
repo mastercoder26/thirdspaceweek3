@@ -61,7 +61,7 @@ public struct MainContainerView: View {
             .background(DNAStyle.background)
             .toolbar {
                 ToolbarItem(placement: .principal) {
-                    Text(appState.selectedTab == .explore ? (appState.selectedSession?.displayTitle ?? "Explore") : appState.selectedTab.rawValue)
+                    Text(appState.selectedTab == .explore ? (appState.selectedSession?.displayTitle ?? "Session map") : appState.selectedTab.rawValue)
                         .font(.system(size: 13, weight: .semibold)).lineLimit(1)
                 }
                 if appState.selectedTab == .explore, let session = appState.selectedSession {
