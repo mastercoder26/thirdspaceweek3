@@ -4,7 +4,6 @@ import Foundation
 
 @Suite("Session playback")
 struct SessionReplayTests {
-    // Scaffold: build a small session with a long gap and a shared parent.
     private func pages() -> [BrowsingNode] {
         let session = UUID()
         let start = Date(timeIntervalSince1970: 1_700_000_000)
@@ -110,5 +109,32 @@ struct SessionReplayTests {
         replay.reconcile(SessionReplaySequence(nodes: []))
         #expect(replay.isOverview)
         #expect(replay.visiblePageIDs.isEmpty)
+    }
+
+    @Test("Following shows source and target together when they fit")
+    func cameraIncludesTheConnection() {
+        let viewport = CGSize(width: 800, height: 400)
+        let source = CGPoint(x: 140, y: 200)
+        let target = CGPoint(x: 520, y: 200)
+        let camera = GraphViewport.follow(target: target, source: source, viewport: viewport)
+        #expect(camera.scale == 0.9)
+        for point in [source, target] {
+            let x = point.x * camera.scale + camera.offset.width
+            let y = point.y * camera.scale + camera.offset.height
+            #expect(x - 110 * camera.scale >= 24)
+            #expect(x + 110 * camera.scale <= viewport.width - 24)
+            #expect(y - 49 * camera.scale >= 24)
+            #expect(y + 49 * camera.scale <= viewport.height - 24)
+        }
+    }
+
+    @Test("A distant branch stays readable instead of zooming across the whole graph")
+    func cameraKeepsDistantPagesReadable() {
+        let viewport = CGSize(width: 500, height: 300)
+        let target = CGPoint(x: -4000, y: 9000)
+        let camera = GraphViewport.follow(target: target, source: .zero, viewport: viewport)
+        #expect(camera.scale == 0.9)
+        #expect(abs(target.x * camera.scale + camera.offset.width - viewport.width / 2) < 0.001)
+        #expect(abs(target.y * camera.scale + camera.offset.height - viewport.height / 2) < 0.001)
     }
 }
