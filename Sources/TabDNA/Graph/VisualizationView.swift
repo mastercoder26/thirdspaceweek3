@@ -53,6 +53,10 @@ public struct VisualizationView: View {
                     Spacer()
                 }.frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
+                SessionGuideView()
+                Divider()
+                ReplayContextView(sequence: sequence, replay: replay)
+                Divider()
                 HStack(spacing: 0) {
                     GeometryReader { geometry in
                         graphCanvas(size: geometry.size)

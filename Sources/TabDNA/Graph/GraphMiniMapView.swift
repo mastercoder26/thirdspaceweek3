@@ -40,8 +40,7 @@ public struct GraphMiniMapView: View {
             }.frame(width: 180, height: 110).clipped()
                 .contentShape(Rectangle()).gesture(DragGesture(minimumDistance: 0).onChanged { value in
                     onNavigate?()
-                    let world = CGPoint(x: (value.location.x - inset.x) / scale + bounds.minX,
-                                        y: (value.location.y - inset.y) / scale + bounds.minY)
+                    let world = CGPoint(x: (value.location.x - inset.x) / scale + bounds.minX, y: (value.location.y - inset.y) / scale + bounds.minY)
                     panOffset = CGSize(width: canvasViewportSize.width / 2 - world.x * zoomScale, height: canvasViewportSize.height / 2 - world.y * zoomScale)
                 })
         }.padding(12).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
