@@ -10,7 +10,7 @@ struct SessionReplayTests {
         let start = Date(timeIntervalSince1970: 1_700_000_000)
         let first = BrowsingNode(sessionId: session, url: "https://example.com/start", title: "Start", timestampOpened: start, orderIndex: 0)
         let second = BrowsingNode(sessionId: session, url: "https://example.com/second", title: "Second", timestampOpened: start, parentNodeId: first.id, orderIndex: 1)
-        let third = BrowsingNode(sessionId: session, url: "https://example.com/third", title: "Third", timestampOpened: start.addingTimeInterval(7200), parentNodeId: first.id, orderIndex: 2)
+        let third = BrowsingNode(sessionId: session, url: "https://example.com/third", title: "Third", timestampOpened: start.addingTimeInterval(7200), tabId: "2", parentNodeId: first.id, orderIndex: 2)
         return [first, second, third]
     }
 
@@ -72,5 +72,43 @@ struct SessionReplayTests {
         replay.showAll()
         #expect(replay.visiblePageIDs.count == 3)
         #expect(replay.focusedPageID == nil)
+    }
+
+    @Test("Manual navigation pauses playback and gives camera control to the user") @MainActor
+    func manualControlAndSeeking() {
+        let replay = SessionReplay()
+        replay.reconcile(SessionReplaySequence(nodes: pages()))
+        replay.play()
+        replay.takeControl()
+        #expect(!replay.isPlaying)
+        #expect(!replay.followsPage)
+        replay.seek(to: 999)
+        #expect(replay.index == 2)
+        replay.seek(to: -99)
+        #expect(replay.index == 0)
+        replay.play()
+        #expect(replay.followsPage)
+        #expect(replay.isPlaying)
+    }
+
+    @Test("Empty, single-page, and removed-page sessions remain safe") @MainActor
+    func smallAndChangingSessions() {
+        let replay = SessionReplay()
+        replay.play()
+        replay.seek(to: 99)
+        #expect(replay.focusedPageID == nil)
+        let pages = pages()
+        replay.reconcile(SessionReplaySequence(nodes: [pages[0]]))
+        replay.play()
+        #expect(replay.phase == .finished)
+        #expect(replay.focusedPageID == pages[0].id)
+        replay.reconcile(SessionReplaySequence(nodes: pages))
+        replay.seek(to: 2)
+        replay.reconcile(SessionReplaySequence(nodes: [pages[0]]))
+        #expect(replay.index == 0)
+        #expect(replay.focusedPageID == pages[0].id)
+        replay.reconcile(SessionReplaySequence(nodes: []))
+        #expect(replay.isOverview)
+        #expect(replay.visiblePageIDs.isEmpty)
     }
 }
