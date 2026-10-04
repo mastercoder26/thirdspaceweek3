@@ -18,9 +18,7 @@ struct SessionReplaySequence {
         pages.indices.contains(index) ? pages[index] : nil
     }
 
-    func previousPage(at index: Int) -> BrowsingNode? {
-        page(at: index - 1)
-    }
+    func previousPage(at index: Int) -> BrowsingNode? { page(at: index - 1) }
 
     func connection(to page: BrowsingNode) -> BrowsingNode? {
         pages.first { $0.id == page.parentNodeId }
