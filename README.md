@@ -19,9 +19,9 @@ Requires macOS 14 or later and Swift 6 to build.
 
 **Saved pages** collects stars and pages with notes across all sessions. Search titles, sites, URLs, or note text; filter to starred pages or notes. Open the original URL or show the page in its session.
 
-**Explore** offers two layouts: Tree and Timeline. Drag empty space to pan. Pinch to zoom, or use the zoom buttons. Fit frames all visible pages; Start returns to the first page at a readable size. Long trails initially open at a readable scale with an overview map. Select a page to see details, notes, stars, and connected pages. Drag a card to reposition it; changing layouts resets the arrangement. Fold or expand branches with the card’s branch badge. Search for a page title, site, URL, or note, then press Return or Next to visit a match.
+**Session map** offers Connections and Timeline layouts. A card represents a recorded visit. Lines connect it to the previous page recorded in that tab, or the last active page. Two branches mean two later visits share the same recorded starting page; this can happen when you return to a page or use another tab. The map includes a visual explanation of splits, and page details explain multiple connections.
 
-The timeline slider shows the session’s pages in chronological order. Play replays the trail; speed can change during playback. Latest shows all recorded pages and follows new visits. Collapsing a branch affects the graph’s visible count but does not change the chronological timeline count.
+Press Play to reveal visits one at a time. The camera smoothly follows the current page, includes its source when both fit, and keeps distant pages readable. Each visit gets 2.4 seconds at Normal speed; Slow and Fast adjust that pace. Waiting time between visits is skipped. The current-page panel shows the title, recorded time, tab change, and source. Playback describes recorded visits rather than recreating every click or tab switch.
 
 **Insights** shows activity for today, the past seven days, or all time, plus a seven-day activity chart and site/category breakdowns.
 
