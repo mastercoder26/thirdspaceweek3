@@ -10,7 +10,7 @@ struct SessionGuideView: View {
                 VStack(alignment: .leading, spacing: 5) {
                     Label("Connections & splits", systemImage: "arrow.triangle.branch").font(.system(size: 11, weight: .semibold))
                     BranchExampleView()
-                    Text("A split means two pages share the same starting page.")
+                    Text("A split means two later visits share the same recorded starting page. You may have returned to that page or used another tab.")
                         .font(.system(size: 11)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                 }.frame(maxWidth: .infinity, alignment: .leading)
                 explanation("Playback", icon: "play.circle", text: "Play follows visits in order and skips waiting time. It doesn’t recreate every click or tab switch.")
