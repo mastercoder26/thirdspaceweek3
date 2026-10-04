@@ -15,7 +15,8 @@ enum GraphViewport {
     }
     static func zoomOffset(from oldScale: CGFloat, to newScale: CGFloat, offset: CGSize, anchor: CGPoint) -> CGSize {
         let ratio = newScale / oldScale
-        return CGSize(width: anchor.x - (anchor.x - offset.width) * ratio, height: anchor.y - (anchor.y - offset.height) * ratio)
+        return CGSize(width: anchor.x - (anchor.x - offset.width) * ratio,
+                      height: anchor.y - (anchor.y - offset.height) * ratio)
     }
     /// Include the source when both cards fit at a readable scale. Distant
     /// branches must not force a huge zoom-out or move the current card offscreen.
