@@ -13,10 +13,9 @@ public struct MainContainerView: View {
         NavigationSplitView {
             VStack(spacing: 0) {
                 HStack(spacing: 10) {
-                    Image(systemName: "point.3.connected.trianglepath.dotted")
-                        .font(.system(size: 21, weight: .medium)).foregroundStyle(DNAStyle.accent)
+                    TabDNALogoMark()
+                        .frame(width: 30, height: 30)
                         .frame(width: 38, height: 38)
-                        .background(DNAStyle.accent.opacity(0.1), in: RoundedRectangle(cornerRadius: 12))
                     VStack(alignment: .leading, spacing: 2) {
                         Text("TabDNA").font(.system(size: 17, weight: .bold)).tracking(-0.3)
                         Text("Browsing history").font(.system(size: 10)).foregroundStyle(.secondary)
