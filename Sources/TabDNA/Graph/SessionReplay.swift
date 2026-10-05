@@ -37,13 +37,14 @@ final class SessionReplay {
     var speed: Double = 1 {
         didSet { if speed != oldValue { generation += 1 } }
     }
-    var stepInterval: TimeInterval { 2.4 / max(0.5, min(2, speed)) }
+
     var isPlaying: Bool { phase == .playing }
     var isOverview: Bool { phase == .overview }
     var focusedPageID: UUID? { isOverview || pageIDs.isEmpty ? nil : pageIDs[index] }
     var visiblePageIDs: Set<UUID> {
         Set(isOverview ? pageIDs : Array(pageIDs.prefix(index + 1)))
     }
+    var stepInterval: TimeInterval { 2.4 / max(0.5, min(2, speed)) }
 
     func reconcile(_ sequence: SessionReplaySequence) {
         let ids = sequence.pages.map(\.id)
