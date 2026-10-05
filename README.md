@@ -59,7 +59,6 @@ Verification: 31 automated tests pass. Native UI checks covered saved-page and n
 
 ## Source layout
 
-- `Views/`: shared design components, navigation, overview, session library, saved pages, insights, settings, menu bar, and quick search.
 - `Graph/`: layout engines, viewport math, page cards and details, timeline, overview map, and PNG export.
 - `State/`: app selection, live session lifecycle, and local session categorization.
 - `Tracking/`: browser adapters and frontmost-tab observation.
