@@ -84,16 +84,16 @@ final class SessionReplay {
 
     func step(_ delta: Int) { seek(to: index + delta) }
 
-    func showAll() {
-        phase = .overview
-        index = max(0, pageIDs.count - 1)
-        generation += 1
-    }
-
     func advance(generation expectedGeneration: Int) {
         guard isPlaying, generation == expectedGeneration else { return }
         index = min(index + 1, pageIDs.count - 1)
         if index == pageIDs.count - 1 { phase = .finished }
+    }
+
+    func showAll() {
+        phase = .overview
+        index = max(0, pageIDs.count - 1)
+        generation += 1
     }
 
     func takeControl() { pause(); followsPage = false }
