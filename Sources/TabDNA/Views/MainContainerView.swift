@@ -4,6 +4,7 @@ import AppKit
 public struct MainContainerView: View {
     @EnvironmentObject var appState: AppState
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @AppStorage("TabDNA_ShowsSessionGuide") private var showsSessionGuide = true
     @State private var isCommandPalettePresented = false
     @State private var exportMessage = ""
     @State private var exportFailed = false
@@ -14,8 +15,7 @@ public struct MainContainerView: View {
             VStack(spacing: 0) {
                 HStack(spacing: 10) {
                     TabDNALogoMark()
-                        .frame(width: 30, height: 30)
-                        .frame(width: 38, height: 38)
+                        .frame(width: 32, height: 32)
                     VStack(alignment: .leading, spacing: 2) {
                         Text("TabDNA").font(.system(size: 17, weight: .bold)).tracking(-0.3)
                         Text("Browsing history").font(.system(size: 10)).foregroundStyle(.secondary)
@@ -69,6 +69,13 @@ public struct MainContainerView: View {
                         Button { appState.selectedTab = .sessions } label: {
                             Label("Sessions", systemImage: "list.bullet")
                         }.help("Choose another session from the library").accessibilityLabel("Choose session")
+                    }
+                    ToolbarItem {
+                        Button {
+                            showsSessionGuide.toggle()
+                        } label: {
+                            Label("Guide", systemImage: showsSessionGuide ? "info.circle.fill" : "info.circle")
+                        }.help("Toggle reading guide for this session")
                     }
                     ToolbarItem {
                         Menu {

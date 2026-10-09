@@ -1,25 +1,42 @@
 import SwiftUI
 
 struct SessionGuideView: View {
-    @AppStorage("TabDNA_ShowsSessionGuide") private var isExpanded = true
+    @AppStorage("TabDNA_SessionGuideExpanded") private var isExpanded = false
+    @AppStorage("TabDNA_ShowsSessionGuide") private var isVisible = true
 
     var body: some View {
-        DisclosureGroup(isExpanded: $isExpanded) {
-            HStack(alignment: .top, spacing: 24) {
-                explanation("Pages & lines", icon: "rectangle.on.rectangle", text: "Cards are recorded visits. A line connects a visit to the previous page in that tab, or your last active page. Select a card for details.")
-                VStack(alignment: .leading, spacing: 5) {
-                    Label("Connections & splits", systemImage: "arrow.triangle.branch").font(.system(size: 11, weight: .semibold))
-                    BranchExampleView()
-                    Text("A split means two later visits share the same recorded starting page. You may have returned to that page or used another tab.")
-                        .font(.system(size: 11)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
-                }.frame(maxWidth: .infinity, alignment: .leading)
-                explanation("Playback", icon: "play.circle", text: "Play follows visits in order and skips waiting time. It doesn’t recreate every click or tab switch.")
-            }.padding(.top, 10).padding(.bottom, 4)
-        } label: {
-            Label("How to read this session", systemImage: "info.circle")
-                .font(.system(size: 12, weight: .semibold))
-        }.padding(.horizontal, 18).padding(.vertical, 10)
-            .background(DNAStyle.surface)
+        if isVisible {
+            DisclosureGroup(isExpanded: $isExpanded) {
+                HStack(alignment: .top, spacing: 24) {
+                    explanation("Pages & lines", icon: "rectangle.on.rectangle", text: "Cards are recorded visits. A line connects a visit to the previous page in that tab, or your last active page. Select a card for details.")
+                    VStack(alignment: .leading, spacing: 5) {
+                        Label("Connections & splits", systemImage: "arrow.triangle.branch").font(.system(size: 11, weight: .semibold))
+                        BranchExampleView()
+                        Text("A split means two later visits share the same recorded starting page. You may have returned to that page or used another tab.")
+                            .font(.system(size: 11)).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+                    }.frame(maxWidth: .infinity, alignment: .leading)
+                    explanation("Playback", icon: "play.circle", text: "Play follows visits in order and skips waiting time. It doesn’t recreate every click or tab switch.")
+                }.padding(.top, 10).padding(.bottom, 4)
+            } label: {
+                HStack {
+                    Label("How to read this session", systemImage: "info.circle")
+                        .font(.system(size: 12, weight: .semibold))
+                    Spacer()
+                    Button {
+                        withAnimation(.easeOut(duration: 0.15)) {
+                            isVisible = false
+                        }
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 10, weight: .semibold))
+                            .foregroundStyle(.secondary)
+                    }
+                    .buttonStyle(.plain)
+                    .help("Dismiss session guide")
+                }
+            }.padding(.horizontal, 18).padding(.vertical, 8)
+                .background(DNAStyle.surface)
+        }
     }
 
     private func explanation(_ title: String, icon: String, text: String) -> some View {

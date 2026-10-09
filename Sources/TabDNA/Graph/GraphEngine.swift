@@ -59,7 +59,7 @@ public final class GraphEngine: @unchecked Sendable {
 
     public init() {}
 
-    /// Computes hierarchical positions for nodes based on selected layout mode
+    /// Positions recorded visits and connects each page to its recorded parent.
     public func computeLayout(
         nodes: [BrowsingNode],
         mode: GraphLayoutMode = .horizontal
@@ -71,23 +71,23 @@ public final class GraphEngine: @unchecked Sendable {
         var rootIds: [UUID] = []
 
         for node in nodes {
-            if let pid = node.parentNodeId, pid != node.id, nodeMap[pid] != nil {
-                childrenMap[pid, default: []].append(node.id)
+            if let parentID = node.parentNodeId, parentID != node.id, nodeMap[parentID] != nil {
+                childrenMap[parentID, default: []].append(node.id)
             } else {
                 rootIds.append(node.id)
             }
         }
 
+        // A cycle has no natural root. Anchor it at the earliest visit.
         if rootIds.isEmpty, let first = nodes.sorted(by: { $0.timestampOpened < $1.timestampOpened }).first {
             rootIds.append(first.id)
         }
 
-        // Generate edges
         var edges: [GraphEdge] = []
-        for (pid, cids) in childrenMap {
-            for cid in cids {
-                let level = nodeMap[cid]?.branchLevel ?? 1
-                edges.append(GraphEdge(sourceId: pid, targetId: cid, level: level))
+        for (parentID, childIDs) in childrenMap {
+            for childID in childIDs {
+                let level = nodeMap[childID]?.branchLevel ?? 1
+                edges.append(GraphEdge(sourceId: parentID, targetId: childID, level: level))
             }
         }
 
@@ -134,13 +134,13 @@ public final class GraphEngine: @unchecked Sendable {
             let children = childrenMap[nodeId] ?? []
             let subtreeHeight = calculateSubtreeHeight(nodeId: nodeId, visited: visited)
 
-            let posX = 140 + CGFloat(level) * (nodeWidth + horizontalSpacing)
-            let posY = topY + (subtreeHeight / 2)
+            let x = 140 + CGFloat(level) * (nodeWidth + horizontalSpacing)
+            let y = topY + (subtreeHeight / 2)
 
             let layout = GraphNodeLayout(
                 node: node,
-                position: CGPoint(x: posX, y: posY),
-                targetPosition: CGPoint(x: posX, y: posY),
+                position: CGPoint(x: x, y: y),
+                targetPosition: CGPoint(x: x, y: y),
                 branchLevel: level,
                 childIds: children,
                 isRoot: level == 0
@@ -161,13 +161,14 @@ public final class GraphEngine: @unchecked Sendable {
             currentY += rootSubtreeHeight + 60
         }
 
+        // Keep disconnected cycles visible even when another tree has a valid root.
         for (nodeId, node) in nodeMap where layoutMap[nodeId] == nil {
-            let posX: CGFloat = 140
-            let posY = currentY
+            let x: CGFloat = 140
+            let y = currentY
             layoutMap[nodeId] = GraphNodeLayout(
                 node: node,
-                position: CGPoint(x: posX, y: posY),
-                targetPosition: CGPoint(x: posX, y: posY),
+                position: CGPoint(x: x, y: y),
+                targetPosition: CGPoint(x: x, y: y),
                 branchLevel: node.branchLevel,
                 childIds: childrenMap[nodeId] ?? [],
                 isRoot: false
@@ -190,13 +191,13 @@ public final class GraphEngine: @unchecked Sendable {
         var currentY: CGFloat = 120
         for node in sortedNodes {
             let level = node.branchLevel
-            let posX = 160 + CGFloat(level) * (nodeWidth + 60)
-            let posY = currentY
+            let x = 160 + CGFloat(level) * (nodeWidth + 60)
+            let y = currentY
 
             layoutMap[node.id] = GraphNodeLayout(
                 node: node,
-                position: CGPoint(x: posX, y: posY),
-                targetPosition: CGPoint(x: posX, y: posY),
+                position: CGPoint(x: x, y: y),
+                targetPosition: CGPoint(x: x, y: y),
                 branchLevel: level,
                 childIds: childrenMap[node.id] ?? [],
                 isRoot: rootIds.contains(node.id)
@@ -206,16 +207,16 @@ public final class GraphEngine: @unchecked Sendable {
         return layoutMap
     }
 
-    /// Finds full ancestry trail back to root
+    /// Returns the trail from the oldest reachable ancestor through the selected page.
     public func findAncestors(for nodeId: UUID, in nodes: [BrowsingNode]) -> [UUID] {
         let nodeMap = Dictionary(uniqueKeysWithValues: nodes.map { ($0.id, $0) })
         var result: [UUID] = []
         var visited: Set<UUID> = []
         var currentId: UUID? = nodeId
 
-        while let cid = currentId, let node = nodeMap[cid], !visited.contains(cid) {
-            visited.insert(cid)
-            result.insert(cid, at: 0)
+        while let pageID = currentId, let node = nodeMap[pageID], !visited.contains(pageID) {
+            visited.insert(pageID)
+            result.insert(pageID, at: 0)
             currentId = node.parentNodeId
         }
         return result

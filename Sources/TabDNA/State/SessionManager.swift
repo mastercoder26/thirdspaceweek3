@@ -52,6 +52,10 @@ public final class SessionManager: ObservableObject {
         observer.onInactivitySessionBoundary = { [weak self] in
             self?.handleInactivityRollover()
         }
+
+        observer.onNodeTitleUpdated = { [weak self] nodeId, title in
+            self?.handleNodeTitleUpdate(nodeId: nodeId, title: title)
+        }
     }
 
     public func startNewSession(title: String? = nil) -> BrowsingSession {
@@ -115,6 +119,14 @@ public final class SessionManager: ObservableObject {
     }
 
     private func handleNodeDurationUpdate(nodeId: UUID, delta: TimeInterval) {
+        if let index = currentSessionNodes.firstIndex(where: { $0.id == nodeId }),
+           let saved = historyStore.getNode(id: nodeId) {
+            currentSessionNodes[index] = saved
+        }
+        currentSession = historyStore.getSession(id: currentSessionId)
+    }
+
+    private func handleNodeTitleUpdate(nodeId: UUID, title: String) {
         if let index = currentSessionNodes.firstIndex(where: { $0.id == nodeId }),
            let saved = historyStore.getNode(id: nodeId) {
             currentSessionNodes[index] = saved

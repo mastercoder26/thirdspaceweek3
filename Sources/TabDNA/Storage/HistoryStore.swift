@@ -19,6 +19,9 @@ public final class HistoryStore: @unchecked Sendable {
     private var cachedNodes: [UUID: BrowsingNode] = [:]
     private var nodesBySession: [UUID: [UUID]] = [:]
     private let lock = NSLock()
+    private var pendingSaveWorkItem: DispatchWorkItem?
+    private var isDirty = false
+    public var saveDebounceInterval: TimeInterval = 5.0
 
     public init(fileURL: URL? = nil) {
         if let fileURL {
@@ -57,24 +60,55 @@ public final class HistoryStore: @unchecked Sendable {
         }
     }
 
-    private func saveToDisk() {
-        queue.async { [weak self] in
-            guard let self = self else { return }
-            self.lock.lock()
-            let sessions = Array(self.cachedSessions.values).sorted(by: { $0.startTime > $1.startTime })
-            let nodes = Array(self.cachedNodes.values).sorted(by: { $0.timestampOpened < $1.timestampOpened })
-            self.lock.unlock()
+    private func performDiskWrite() {
+        lock.lock()
+        let sessions = Array(cachedSessions.values).sorted(by: { $0.startTime > $1.startTime })
+        let nodes = Array(cachedNodes.values).sorted(by: { $0.timestampOpened < $1.timestampOpened })
+        isDirty = false
+        lock.unlock()
 
-            let store = StoreData(sessions: sessions, nodes: nodes)
-            do {
-                let encoder = JSONEncoder()
-                encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
-                encoder.dateEncodingStrategy = .iso8601
-                let data = try encoder.encode(store)
-                try data.write(to: self.fileURL, options: .atomic)
-            } catch {
-                print("[HistoryStore] Failed to write data: \(error)")
+        let store = StoreData(sessions: sessions, nodes: nodes)
+        do {
+            let encoder = JSONEncoder()
+            encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+            encoder.dateEncodingStrategy = .iso8601
+            let data = try encoder.encode(store)
+            try data.write(to: self.fileURL, options: .atomic)
+        } catch {
+            print("[HistoryStore] Failed to write data: \(error)")
+        }
+    }
+
+    private func saveToDisk(immediate: Bool = true) {
+        lock.lock()
+        if immediate {
+            pendingSaveWorkItem?.cancel()
+            pendingSaveWorkItem = nil
+            isDirty = false
+            lock.unlock()
+            queue.async { [weak self] in
+                self?.performDiskWrite()
             }
+        } else {
+            isDirty = true
+            if pendingSaveWorkItem != nil {
+                lock.unlock()
+                return
+            }
+            let workItem = DispatchWorkItem { [weak self] in
+                guard let self = self else { return }
+                self.lock.lock()
+                let shouldSave = self.isDirty
+                self.pendingSaveWorkItem = nil
+                self.lock.unlock()
+                if shouldSave {
+                    self.performDiskWrite()
+                }
+            }
+            pendingSaveWorkItem = workItem
+            let interval = saveDebounceInterval
+            lock.unlock()
+            queue.asyncAfter(deadline: .now() + interval, execute: workItem)
         }
     }
 
@@ -165,7 +199,32 @@ public final class HistoryStore: @unchecked Sendable {
 
         recomputeMetrics(for: node.sessionId)
         lock.unlock()
-        saveToDisk()
+        saveToDisk(immediate: false)
+    }
+
+    public func updateNodeTitle(nodeId: UUID, title: String) {
+        let clean = title.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !clean.isEmpty else { return }
+
+        lock.lock()
+        guard var node = cachedNodes[nodeId] else {
+            lock.unlock()
+            return
+        }
+
+        guard node.title != clean else {
+            lock.unlock()
+            return
+        }
+
+        node.title = clean
+        if node.faviconEmoji == "🌐" || node.faviconEmoji.isEmpty {
+            node.faviconEmoji = BrowsingNode.suggestEmoji(for: node.domain, title: clean)
+        }
+        cachedNodes[nodeId] = node
+        recomputeMetrics(for: node.sessionId)
+        lock.unlock()
+        saveToDisk(immediate: true)
     }
 
     public func getNode(id: UUID) -> BrowsingNode? {
@@ -208,12 +267,29 @@ public final class HistoryStore: @unchecked Sendable {
         cachedSessions.removeAll()
         cachedNodes.removeAll()
         nodesBySession.removeAll()
+        pendingSaveWorkItem?.cancel()
+        pendingSaveWorkItem = nil
+        isDirty = false
         lock.unlock()
         // Serialize with pending writes so deleted data cannot reappear on disk.
-        saveToDisk()
+        saveToDisk(immediate: true)
     }
 
-    public func flush() { queue.sync {} }
+    public func flush() {
+        lock.lock()
+        let hasPending = pendingSaveWorkItem != nil || isDirty
+        pendingSaveWorkItem?.cancel()
+        pendingSaveWorkItem = nil
+        isDirty = false
+        lock.unlock()
+
+        queue.sync { [weak self] in
+            guard let self = self else { return }
+            if hasPending {
+                self.performDiskWrite()
+            }
+        }
+    }
 
     public func exportJSON() throws -> URL {
         let tempDir = FileManager.default.temporaryDirectory

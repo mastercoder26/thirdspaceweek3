@@ -18,24 +18,43 @@ public struct NodeCardView: View {
         let emphasized = isSelected || isReplayFocused
         ZStack(alignment: .bottomTrailing) {
             Button(action: onSelect) {
-                VStack(alignment: .leading, spacing: 7) {
+                VStack(alignment: .leading, spacing: 6) {
                     HStack(spacing: 6) {
                         FaviconView(domain: node.domain, fallbackEmoji: node.faviconEmoji, size: 14)
                         Text(node.domain).font(.system(size: 10, weight: .medium)).foregroundStyle(.secondary).lineLimit(1)
                         Spacer(minLength: 3)
-                        if node.isPinned { Image(systemName: "star.fill").font(.system(size: 9)).foregroundStyle(.orange) }
-                        if isCurrentlyActiveTab { Circle().fill(.green).frame(width: 6, height: 6) }
+                        if node.isPinned {
+                            Image(systemName: "star.fill")
+                                .font(.system(size: 9))
+                                .foregroundStyle(.orange)
+                                .help("Starred page")
+                        }
+                        if isCurrentlyActiveTab {
+                            Circle()
+                                .fill(.green)
+                                .frame(width: 6, height: 6)
+                                .help("Active tab")
+                        }
                     }
                     Text(node.title).font(.system(size: 12, weight: .semibold)).lineLimit(2)
-                        .frame(height: 30, alignment: .topLeading).frame(maxWidth: .infinity, alignment: .leading)
+                        .frame(height: 34, alignment: .topLeading).frame(maxWidth: .infinity, alignment: .leading)
                     HStack(spacing: 5) {
-                        Text(node.formattedDuration).monospacedDigit()
+                        Text(node.formattedDuration).monospacedDigit().lineLimit(1)
                         Text("·")
-                        Text(isReplayFocused ? "Now showing" : node.formattedTime)
-                        Spacer()
+                        Text(isReplayFocused ? "Now showing" : node.formattedTime).lineLimit(1)
+                        Spacer(minLength: 4)
                         if layout.childIds.count > 1 {
-                            Label("\(layout.childIds.count) paths", systemImage: "arrow.triangle.branch")
-                                .help("Later visits share this page as their recorded starting point")
+                            HStack(spacing: 3) {
+                                Image(systemName: "arrow.triangle.branch")
+                                    .font(.system(size: 8))
+                                Text("\(layout.childIds.count) paths")
+                                    .font(.system(size: 8.5, weight: .medium))
+                            }
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 1.5)
+                            .background(Color.primary.opacity(0.06))
+                            .clipShape(Capsule())
+                            .help("Later visits share this page as their recorded starting point")
                         }
                     }.font(.system(size: 9)).foregroundStyle(.secondary)
                 }.padding(12).frame(width: 220, height: 98)

@@ -1,5 +1,5 @@
-import Foundation
 import AppKit
+import Foundation
 
 @MainActor
 public final class MarkdownExporter {
@@ -24,8 +24,8 @@ public final class MarkdownExporter {
         var visited: Set<UUID> = []
 
         for node in nodes {
-            if let pid = node.parentNodeId, pid != node.id, nodeMap[pid] != nil {
-                childrenMap[pid, default: []].append(node.id)
+            if let parentID = node.parentNodeId, parentID != node.id, nodeMap[parentID] != nil {
+                childrenMap[parentID, default: []].append(node.id)
             } else {
                 rootIds.append(node.id)
             }
@@ -45,9 +45,12 @@ public final class MarkdownExporter {
                 .replacingOccurrences(of: "\n", with: " ")
             let label: String
             if let url = node.reopenURL {
-                let destination = url.absoluteString.replacingOccurrences(of: "<", with: "%3C").replacingOccurrences(of: ">", with: "%3E")
+                let destination = url.absoluteString.replacingOccurrences(of: "<", with: "%3C")
+                    .replacingOccurrences(of: ">", with: "%3E")
                 label = "[\(title)](<\(destination)>)"
-            } else { label = title }
+            } else {
+                label = title
+            }
             output += "\(indentation)- \(node.isPinned ? "★ " : "")\(label) `[\(duration)]`\n"
 
             if let note = node.notes, !note.isEmpty {
@@ -64,6 +67,7 @@ public final class MarkdownExporter {
             appendNodeTree(nodeId: rootId, indent: 0)
         }
 
+        // Broken parent links and disconnected cycles still belong in the export.
         for node in nodes where !visited.contains(node.id) {
             appendNodeTree(nodeId: node.id, indent: 0)
         }

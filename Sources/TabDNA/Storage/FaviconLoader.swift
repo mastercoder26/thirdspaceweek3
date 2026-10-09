@@ -1,5 +1,5 @@
-import SwiftUI
 import AppKit
+import SwiftUI
 
 @MainActor
 public final class FaviconLoader: ObservableObject {
@@ -40,9 +40,10 @@ public final class FaviconLoader: ObservableObject {
     public func load(_ domain: String) async {
         let clean = domain.lowercased()
         guard UserDefaults.standard.bool(forKey: "TabDNA_LoadSiteIcons"),
-              PrivacyManager.normalizedDomain(clean) != nil,
-              memoryCache.object(forKey: clean as NSString) == nil,
-              !failedDomains.contains(clean), !inFlightDomains.contains(clean) else { return }
+            PrivacyManager.normalizedDomain(clean) != nil,
+            memoryCache.object(forKey: clean as NSString) == nil,
+            !failedDomains.contains(clean), !inFlightDomains.contains(clean)
+        else { return }
         inFlightDomains.insert(clean)
         await fetchFaviconOnline(for: clean)
     }
@@ -65,7 +66,8 @@ public final class FaviconLoader: ObservableObject {
         do {
             let (data, response) = try await URLSession.shared.data(from: url)
             guard let httpResponse = response as? HTTPURLResponse, httpResponse.statusCode == 200,
-                  let image = NSImage(data: data) else {
+                let image = NSImage(data: data)
+            else {
                 failedDomains.insert(clean)
                 return
             }
@@ -76,7 +78,6 @@ public final class FaviconLoader: ObservableObject {
             let diskPath = self.cacheDir.appendingPathComponent("\(clean).png")
             try? data.write(to: diskPath, options: .atomic)
 
-            // Trigger object change so views update
             self.objectWillChange.send()
         } catch {
             failedDomains.insert(clean)
@@ -105,6 +106,12 @@ public struct FaviconView: View {
                     .aspectRatio(contentMode: .fit)
                     .frame(width: size, height: size)
                     .clipShape(RoundedRectangle(cornerRadius: 4))
+            } else if !fallbackEmoji.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                Text(fallbackEmoji)
+                    .font(.system(size: size * 0.75))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
+                    .frame(width: size, height: size)
             } else {
                 Image(systemName: "globe")
                     .font(.system(size: size * 0.75))

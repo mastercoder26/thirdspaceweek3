@@ -29,7 +29,7 @@ public final class PrivacyManager: @unchecked Sendable {
                 "1password.com",
                 "bitwarden.com",
                 "lastpass.com",
-                "mint.intuit.com"
+                "mint.intuit.com",
             ]
         }
         self.filteredCount = defaults.integer(forKey: auditCountKey)
@@ -54,8 +54,9 @@ public final class PrivacyManager: @unchecked Sendable {
         }
 
         let lower = url.lowercased()
-        if lower.contains("login") || lower.contains("signin") || lower.contains("password") || lower.contains("checkout") {
-            // Check if domain is specifically privacy-sensitive
+        if lower.contains("login") || lower.contains("signin") || lower.contains("password")
+            || lower.contains("checkout")
+        {
             if lower.contains("auth") || lower.contains("sso") {
                 recordFilteredEvent()
                 return false
@@ -67,8 +68,26 @@ public final class PrivacyManager: @unchecked Sendable {
     public func sanitize(url: String) -> String {
         guard var components = URLComponents(string: url) else { return url }
         if let items = components.queryItems {
-            let sensitiveKeys: Set<String> = ["token", "auth", "access_token", "key", "password", "pwd", "secret", "code", "session", "user_id"]
-            components.queryItems = items.filter { !sensitiveKeys.contains($0.name.lowercased()) }
+            let sensitiveKeys: Set<String> = [
+                "token", "auth", "access_token", "key", "password", "pwd", "secret", "code", "session",
+                "user_id",
+                "api_key", "apikey",
+                "session_id", "sessionid", "session_token",
+                "auth_token", "authtoken", "oauth_token", "id_token", "refresh_token",
+                "client_secret", "secret_key", "private_key",
+                "state",
+                "signature", "sig",
+                "jwt", "bearer",
+                "credential", "credentials",
+                "gclid", "fbclid", "msclkid", "mc_eid", "igshid", "_hsenc", "_hsmi", "mc_cid",
+            ]
+            let filtered = items.filter { item in
+                let lower = item.name.lowercased()
+                if sensitiveKeys.contains(lower) { return false }
+                if lower.hasPrefix("utm_") { return false }
+                return true
+            }
+            components.queryItems = filtered.isEmpty ? nil : filtered
         }
         return components.string ?? url
     }
@@ -91,10 +110,20 @@ public final class PrivacyManager: @unchecked Sendable {
         guard !trimmed.isEmpty, !trimmed.contains(where: { $0.isWhitespace }) else { return nil }
         let candidate = trimmed.contains("://") ? trimmed : "https://" + trimmed
         guard let url = URLComponents(string: candidate), let host = url.host,
-              url.user == nil, url.password == nil,
-              host.contains("."), !host.hasPrefix("."), !host.hasSuffix("."),
-              host.split(separator: ".", omittingEmptySubsequences: false).allSatisfy({ !$0.isEmpty && !$0.hasPrefix("-") && !$0.hasSuffix("-") && $0.allSatisfy { $0.isLetter || $0.isNumber || $0 == "-" } }) else { return nil }
-        return host.hasPrefix("www.") ? String(host.dropFirst(4)) : host
+            url.user == nil, url.password == nil
+        else { return nil }
+        let cleanHost = host.hasPrefix("www.") ? String(host.dropFirst(4)) : host
+        if cleanHost == "localhost" || cleanHost == "127.0.0.1" {
+            return cleanHost
+        }
+        guard cleanHost.contains("."), !cleanHost.hasPrefix("."), !cleanHost.hasSuffix("."),
+            cleanHost.split(separator: ".", omittingEmptySubsequences: false)
+                .allSatisfy({
+                    !$0.isEmpty && !$0.hasPrefix("-") && !$0.hasSuffix("-")
+                        && $0.allSatisfy { $0.isLetter || $0.isNumber || $0 == "-" }
+                })
+        else { return nil }
+        return cleanHost
     }
 
     public func addDomain(_ domain: String) {
@@ -125,7 +154,7 @@ public final class PrivacyManager: @unchecked Sendable {
             "1password.com",
             "bitwarden.com",
             "lastpass.com",
-            "mint.intuit.com"
+            "mint.intuit.com",
         ]
         defaults.set(Array(blacklistedDomains), forKey: defaultsKey)
         lock.unlock()

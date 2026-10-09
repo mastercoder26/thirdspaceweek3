@@ -1,5 +1,5 @@
-import SwiftUI
 import AppKit
+import SwiftUI
 
 public struct CommandItem: Identifiable, Sendable {
     public let id: String
@@ -41,83 +41,98 @@ public struct CommandPaletteView: View {
     private var allCommands: [CommandItem] {
         var items: [CommandItem] = []
 
-        // Navigation & Actions
-        items.append(CommandItem(
-            title: appState.observer.isTrackingEnabled ? "Pause Browser Tracking" : "Resume Browser Tracking",
-            subtitle: "Global tracking status",
-            icon: appState.observer.isTrackingEnabled ? "pause.circle.fill" : "play.circle.fill",
-            category: "Tracking"
-        ) {
-            appState.observer.toggleTracking()
-            isPresented = false
-        })
-
-        items.append(CommandItem(
-            title: "Start New Browsing Session",
-            subtitle: "Begin a new tree root",
-            icon: "plus.circle.fill",
-            category: "Sessions"
-        ) {
-            appState.startNewSession()
-            isPresented = false
-        })
-
-        items.append(CommandItem(
-            title: "Go to Overview",
-            subtitle: "View statistics & recent sessions",
-            icon: "square.grid.2x2.fill",
-            category: "Navigation"
-        ) {
-            appState.selectedTab = .dashboard
-            isPresented = false
-        })
-
-        items.append(CommandItem(
-            title: "Open Session Library",
-            subtitle: "Filter and manage recorded sessions",
-            icon: "list.bullet.indent",
-            category: "Navigation"
-        ) {
-            appState.selectedTab = .sessions
-            isPresented = false
-        })
-
-        items.append(CommandItem(
-            title: "Go to Insights",
-            subtitle: "Browsing time, sites, and categories",
-            icon: "chart.bar.xaxis",
-            category: "Navigation"
-        ) {
-            appState.selectedTab = .statistics
-            isPresented = false
-        })
-
-        items.append(CommandItem(
-            title: "Go to Settings & Privacy",
-            subtitle: "Blacklisted domains & tracking settings",
-            icon: "gearshape.fill",
-            category: "Navigation"
-        ) {
-            appState.selectedTab = .settings
-            isPresented = false
-        })
-
-        for session in appState.sessions {
-            items.append(CommandItem(id: "session-" + session.id.uuidString,
-                title: session.displayTitle, subtitle: "\(session.pageCount) pages · \(session.formattedTimeRange)",
-                icon: session.category.icon, category: "Sessions") {
-                appState.selectSession(session)
+        items.append(
+            CommandItem(
+                title: appState.observer.isTrackingEnabled
+                    ? "Pause browser tracking" : "Resume browser tracking",
+                subtitle: "Control recording across supported browsers",
+                icon: appState.observer.isTrackingEnabled ? "pause.circle.fill" : "play.circle.fill",
+                category: "Tracking"
+            ) {
+                appState.observer.toggleTracking()
                 isPresented = false
             })
+
+        items.append(
+            CommandItem(
+                title: "Start a new session",
+                subtitle: "Start a separate browsing session",
+                icon: "plus.circle.fill",
+                category: "Sessions"
+            ) {
+                appState.startNewSession()
+                isPresented = false
+            })
+
+        items.append(
+            CommandItem(
+                title: "Open overview",
+                subtitle: "View statistics & recent sessions",
+                icon: "square.grid.2x2.fill",
+                category: "Navigation"
+            ) {
+                appState.selectedTab = .dashboard
+                isPresented = false
+            })
+
+        items.append(
+            CommandItem(
+                title: "Open session library",
+                subtitle: "Filter and manage recorded sessions",
+                icon: "list.bullet.indent",
+                category: "Navigation"
+            ) {
+                appState.selectedTab = .sessions
+                isPresented = false
+            })
+
+        items.append(
+            CommandItem(
+                title: "Open insights",
+                subtitle: "Browsing time, sites, and categories",
+                icon: "chart.bar.xaxis",
+                category: "Navigation"
+            ) {
+                appState.selectedTab = .statistics
+                isPresented = false
+            })
+
+        items.append(
+            CommandItem(
+                title: "Open settings and privacy",
+                subtitle: "Excluded sites and recording settings",
+                icon: "gearshape.fill",
+                category: "Navigation"
+            ) {
+                appState.selectedTab = .settings
+                isPresented = false
+            })
+
+        for session in appState.sessions {
+            items.append(
+                CommandItem(
+                    id: "session-" + session.id.uuidString,
+                    title: session.displayTitle,
+                    subtitle: "\(session.pageCount) pages · \(session.formattedTimeRange)",
+                    icon: session.category.icon, category: "Sessions"
+                ) {
+                    appState.selectSession(session)
+                    isPresented = false
+                })
         }
 
-        items.append(CommandItem(title: "Open Saved Pages", subtitle: "Stars and personal notes", icon: "star", category: "Navigation") {
-            appState.selectedTab = .saved
-            isPresented = false
-        })
+        items.append(
+            CommandItem(
+                title: "Open saved pages", subtitle: "Stars and personal notes", icon: "star",
+                category: "Navigation"
+            ) {
+                appState.selectedTab = .saved
+                isPresented = false
+            })
 
-        // Dynamic search over past recorded nodes sorted by recency
-        let allNodes = appState.historyStore.getAllNodes().sorted(by: { $0.timestampOpened > $1.timestampOpened })
+        // Keep the initial list short; a query searches the full recorded history.
+        let allNodes = appState.historyStore.getAllNodes()
+            .sorted(by: { $0.timestampOpened > $1.timestampOpened })
         let pageMatches: [BrowsingNode]
         let trimmedQuery = searchText.trimmingCharacters(in: .whitespaces).lowercased()
         if trimmedQuery.isEmpty {
@@ -127,16 +142,17 @@ public struct CommandPaletteView: View {
         }
 
         for node in pageMatches {
-            items.append(CommandItem(
-                id: node.id.uuidString,
-                title: node.title,
-                subtitle: "\(node.domain) · \(node.hasNotes ? (node.notes ?? "") : node.formattedTime)",
-                icon: "doc.text.fill",
-                category: "Pages Visited"
-            ) {
-                appState.openPage(node)
-                isPresented = false
-            })
+            items.append(
+                CommandItem(
+                    id: node.id.uuidString,
+                    title: node.title,
+                    subtitle: "\(node.domain) · \(node.hasNotes ? (node.notes ?? "") : node.formattedTime)",
+                    icon: "doc.text.fill",
+                    category: "Pages visited"
+                ) {
+                    appState.openPage(node)
+                    isPresented = false
+                })
         }
 
         return items
@@ -148,39 +164,39 @@ public struct CommandPaletteView: View {
         }
         let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         return allCommands.filter {
-            $0.category == "Pages Visited" || $0.title.lowercased().contains(query) ||
-            $0.subtitle.lowercased().contains(query) ||
-            $0.category.lowercased().contains(query)
+            $0.category == "Pages visited" || $0.title.lowercased().contains(query)
+                || $0.subtitle.lowercased().contains(query) || $0.category.lowercased().contains(query)
         }
     }
 
     public var body: some View {
         let results = Array(filteredCommands.prefix(15))
         ZStack {
-            // Scrim
             Color.black.opacity(0.4)
                 .ignoresSafeArea()
                 .onTapGesture {
                     isPresented = false
                 }
 
-            // Modal Card
             VStack(spacing: 0) {
-                // Search Input Header
                 HStack(spacing: 12) {
                     Image(systemName: "magnifyingglass")
                         .font(.system(size: 16, weight: .semibold))
                         .foregroundStyle(Color.secondary)
 
-                    TextField("Type a command, page title, or domain...", text: $searchText)
+                    TextField("Search commands, pages, or sites", text: $searchText)
                         .textFieldStyle(.plain)
                         .font(.system(size: 15))
                         .focused($searchFocused)
                         .onKeyPress(.downArrow) {
-                            selectedIndex = min(max(0, min(15, filteredCommands.count) - 1), selectedIndex + 1)
+                            selectedIndex = min(
+                                max(0, min(15, filteredCommands.count) - 1), selectedIndex + 1)
                             return .handled
                         }
-                        .onKeyPress(.upArrow) { selectedIndex = max(0, selectedIndex - 1); return .handled }
+                        .onKeyPress(.upArrow) {
+                            selectedIndex = max(0, selectedIndex - 1)
+                            return .handled
+                        }
                         .onSubmit {
                             executeSelected()
                         }
@@ -207,71 +223,80 @@ public struct CommandPaletteView: View {
 
                 Divider()
 
-                // Results List
                 ScrollViewReader { proxy in
-                ScrollView {
-                    LazyVStack(spacing: 2) {
-                        ForEach(Array(results.enumerated()), id: \.element.id) { index, item in
-                            let isHighlighted = (index == selectedIndex)
+                    ScrollView {
+                        LazyVStack(spacing: 2) {
+                            ForEach(Array(results.enumerated()), id: \.element.id) { index, item in
+                                let isHighlighted = (index == selectedIndex)
 
-                            Button {
-                                NSHapticFeedbackManager.defaultPerformer.perform(.generic, performanceTime: .now)
-                                item.action()
-                            } label: {
-                                HStack(spacing: 12) {
-                                    Image(systemName: item.icon)
-                                        .font(.system(size: 14))
-                                        .foregroundStyle(isHighlighted ? Color.white : DNAStyle.accent)
-                                        .frame(width: 24, height: 24)
+                                Button {
+                                    NSHapticFeedbackManager.defaultPerformer.perform(
+                                        .generic, performanceTime: .now)
+                                    item.action()
+                                } label: {
+                                    HStack(spacing: 12) {
+                                        Image(systemName: item.icon)
+                                            .font(.system(size: 14))
+                                            .foregroundStyle(isHighlighted ? Color.white : DNAStyle.accent)
+                                            .frame(width: 24, height: 24)
 
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        Text(item.title)
-                                            .font(.system(size: 13, weight: .semibold))
-                                            .foregroundStyle(isHighlighted ? Color.white : Color.primary)
-                                            .lineLimit(1)
-
-                                        if !item.subtitle.isEmpty {
-                                            Text(item.subtitle)
-                                                .font(.system(size: 11))
-                                                .foregroundStyle(isHighlighted ? Color.white.opacity(0.8) : Color.secondary)
+                                        VStack(alignment: .leading, spacing: 2) {
+                                            Text(item.title)
+                                                .font(.system(size: 13, weight: .semibold))
+                                                .foregroundStyle(isHighlighted ? Color.white : Color.primary)
                                                 .lineLimit(1)
+
+                                            if !item.subtitle.isEmpty {
+                                                Text(item.subtitle)
+                                                    .font(.system(size: 11))
+                                                    .foregroundStyle(
+                                                        isHighlighted
+                                                            ? Color.white.opacity(0.8) : Color.secondary
+                                                    )
+                                                    .lineLimit(1)
+                                            }
                                         }
+
+                                        Spacer()
+
+                                        Text(item.category)
+                                            .font(.system(size: 10, weight: .bold))
+                                            .padding(.horizontal, 6)
+                                            .padding(.vertical, 2)
+                                            .background(
+                                                isHighlighted
+                                                    ? Color.white.opacity(0.2) : Color.primary.opacity(0.06)
+                                            )
+                                            .foregroundStyle(isHighlighted ? Color.white : Color.secondary)
+                                            .clipShape(Capsule())
                                     }
-
-                                    Spacer()
-
-                                    Text(item.category)
-                                        .font(.system(size: 10, weight: .bold))
-                                        .padding(.horizontal, 6)
-                                        .padding(.vertical, 2)
-                                        .background(isHighlighted ? Color.white.opacity(0.2) : Color.primary.opacity(0.06))
-                                        .foregroundStyle(isHighlighted ? Color.white : Color.secondary)
-                                        .clipShape(Capsule())
+                                    .padding(.horizontal, 14)
+                                    .padding(.vertical, 8)
+                                    .background(isHighlighted ? DNAStyle.accent : Color.clear)
+                                    .clipShape(RoundedRectangle(cornerRadius: 8))
                                 }
-                                .padding(.horizontal, 14)
-                                .padding(.vertical, 8)
-                                .background(isHighlighted ? DNAStyle.accent : Color.clear)
-                                .clipShape(RoundedRectangle(cornerRadius: 8))
+                                .buttonStyle(.plain)
+                                .id(item.id)
                             }
-                            .buttonStyle(.plain)
-                            .id(item.id)
+                            if filteredCommands.isEmpty {
+                                EmptyStateView(
+                                    icon: "magnifyingglass", title: "No results",
+                                    message: "Try a page title, site, session, or command.")
+                            }
                         }
-                        if filteredCommands.isEmpty {
-                            EmptyStateView(icon: "magnifyingglass", title: "No results", message: "Try a page title, site, session, or command.")
-                        }
+                        .padding(8)
                     }
-                    .padding(8)
-                }
-                .frame(height: min(380, max(100, CGFloat(results.count) * 58 + 16)))
-                .onChange(of: selectedIndex) { _, index in
-                    if results.indices.contains(index) { proxy.scrollTo(results[index].id) }
-                }
+                    .frame(height: min(380, max(100, CGFloat(results.count) * 58 + 16)))
+                    .onChange(of: selectedIndex) { _, index in
+                        if results.indices.contains(index) { proxy.scrollTo(results[index].id) }
+                    }
                 }
                 HStack {
                     Text("↑ ↓ Navigate     ↵ Open")
                     Spacer()
                     Text("esc Close")
-                }.font(.system(size: 10)).foregroundStyle(.secondary).padding(12)
+                }
+                .font(.system(size: 10)).foregroundStyle(.secondary).padding(12)
             }
             .frame(width: 560)
             .background(.ultraThinMaterial)

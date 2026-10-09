@@ -20,6 +20,7 @@ public struct VisualizationView: View {
     @State private var replay = SessionReplay()
     @State private var viewportSize: CGSize = .zero
     @State private var showsMap = false
+    @State private var mouseLocation: CGPoint?
 
     public init(session: BrowsingSession, allNodes: [BrowsingNode]) {
         self.session = session
@@ -54,9 +55,13 @@ public struct VisualizationView: View {
                 }.frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 SessionGuideView()
-                Divider()
-                ReplayContextView(sequence: sequence, replay: replay)
-                Divider()
+                if !replay.isOverview {
+                    Divider()
+                    ReplayContextView(sequence: sequence, replay: replay)
+                    Divider()
+                } else {
+                    Divider()
+                }
                 HStack(spacing: 0) {
                     GeometryReader { geometry in
                         graphCanvas(size: geometry.size)
@@ -216,17 +221,27 @@ public struct VisualizationView: View {
         }
         .frame(width: size.width, height: size.height).clipped()
         .coordinateSpace(name: "graphViewport")
+        .onContinuousHover { phase in
+            switch phase {
+            case .active(let location):
+                mouseLocation = location
+            case .ended:
+                mouseLocation = nil
+            }
+        }
         .simultaneousGesture(MagnificationGesture().onChanged { value in
             replay.takeControl()
-            changeZoom(zoomScale * value / lastMagnification)
+            changeZoom(zoomScale * value / lastMagnification, anchor: mouseLocation)
             lastMagnification = value
         }.onEnded { _ in lastMagnification = 1 })
         .overlay(alignment: .bottomLeading) {
             HStack(spacing: 4) {
-                Button { replay.takeControl(); animateNavigation { changeZoom(zoomScale / 1.25) } } label: { Image(systemName: "minus").frame(width: 25, height: 25) }
+                Button { replay.takeControl(); animateNavigation { changeZoom(zoomScale / 1.25, anchor: mouseLocation) } } label: { Image(systemName: "minus").frame(width: 25, height: 25) }
+                    .keyboardShortcut("-", modifiers: .command)
                     .help("Zoom out").accessibilityLabel("Zoom out")
                 Text("\(Int(zoomScale * 100))%").font(.system(size: 11, weight: .medium)).monospacedDigit().frame(width: 42)
-                Button { replay.takeControl(); animateNavigation { changeZoom(zoomScale * 1.25) } } label: { Image(systemName: "plus").frame(width: 25, height: 25) }
+                Button { replay.takeControl(); animateNavigation { changeZoom(zoomScale * 1.25, anchor: mouseLocation) } } label: { Image(systemName: "plus").frame(width: 25, height: 25) }
+                    .keyboardShortcut("=", modifiers: .command)
                     .help("Zoom in").accessibilityLabel("Zoom in")
                 Divider().frame(height: 18)
                 Button("Fit pages") { replay.takeControl(); animateNavigation { fitGraph() } }.help("Fit all visible pages")
@@ -281,10 +296,10 @@ public struct VisualizationView: View {
         zoomScale = fit.scale
         panOffset = fit.offset
     }
-    private func changeZoom(_ scale: CGFloat) {
+    private func changeZoom(_ scale: CGFloat, anchor: CGPoint? = nil) {
         let next = min(GraphViewport.scaleRange.upperBound, max(GraphViewport.scaleRange.lowerBound, scale))
-        panOffset = GraphViewport.zoomOffset(from: zoomScale, to: next, offset: panOffset,
-            anchor: CGPoint(x: viewportSize.width / 2, y: viewportSize.height / 2))
+        let effectiveAnchor = anchor ?? mouseLocation ?? CGPoint(x: viewportSize.width / 2, y: viewportSize.height / 2)
+        panOffset = GraphViewport.zoomOffset(from: zoomScale, to: next, offset: panOffset, anchor: effectiveAnchor)
         zoomScale = next
     }
     private func center(on id: UUID, scale: CGFloat = 1) {

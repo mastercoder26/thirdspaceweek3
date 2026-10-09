@@ -553,7 +553,7 @@ struct UsefulFeatureTests {
         let safari = BrowserTabInfo(windowId: "1", tabId: "1", url: "https://example.com", title: "A", browserName: "Safari")
         let other = resolver.resolve(tab: safari, url: safari.url, sessionId: id, lookup: { nodes[$0] })
         #expect(other.existing == nil)
-        #expect(other.parent?.id == root.id)
+        #expect(other.parent == nil)
         let navigation = resolver.resolve(tab: chrome, url: "https://example.com/new", sessionId: id, lookup: { nodes[$0] })
         #expect(navigation.existing == nil && navigation.parent?.id == root.id)
         resolver.reset()
